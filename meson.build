@@ -8,6 +8,13 @@ project ('everb', ['c', 'cpp'],
         'c_std=c99',
     ])
 
+# Add objective-c if on mac
+if host_machine.system() == 'darwin'
+  add_languages(['objc', 'objcpp'], native : false, required : true)
+  objcc = meson.get_compiler ('objc')
+  objcpp = meson.get_compiler ('objcpp')
+endif
+
 add_global_arguments (['-DLVTK_STATIC=1', '-DPUGL_STATIC=1'], 
     language : [ 'c', 'cpp' ])
 
@@ -35,4 +42,8 @@ lvtk_opengl_dep = dependency ('lvtk-opengl-3',
 juce_proj = subproject ('juce')
 juce_dep = juce_proj.get_variable ('juce_dep')
 
-subdir ('everb.lv2')
+subdir ('everb')
+
+summary ('Bundle', lv2_bundle, section : 'LV2')
+summary ('Install', lv2_install_dir, section : 'Paths')
+

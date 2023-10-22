@@ -1,9 +1,15 @@
 fs = import ('fs')
 
+lv2_bundle = 'everb.lv2'
 everb_sources = files ('''
     plugin.cpp
-    everb.cpp
 '''.split())
+
+if host_machine.system() == 'darwin'
+    everb_sources += 'everb.mm'
+else
+    everb_sources += 'everb.cpp'
+endif
 
 everb_ui_type = 'X11UI'
 if host_machine.system() == 'windows'
@@ -12,27 +18,27 @@ elif host_machine.system() == 'darwin'
     everb_ui_type = 'CocoaUI'
 endif
 
-plugin_install_dir = fs.expanduser (get_option ('lv2dir'))
-if plugin_install_dir == ''
+lv2_install_dir = fs.expanduser (get_option ('lv2dir')).strip()
+if lv2_install_dir == ''
     if target_machine.system() == 'darwin'
-        plugin_install_dir = '/Library/Audio/Plug-Ins/LV2'
+        lv2_install_dir = '/Library/Audio/Plug-Ins/LV2'
     elif target_machine.system() == 'haiku'
-        plugin_install_dir = '/boot/common/add-ons/lv2'
+        lv2_install_dir = '/boot/common/add-ons/lv2'
     elif target_machine.system() == 'windows'
-        plugin_install_dir = 'C:/Program Files/Common Files/LV2'
+        lv2_install_dir = 'C:/Program Files/Common Files/LV2'
     else
-        plugin_install_dir = get_option('prefix') / 'lib' / 'lv2'
+        lv2_install_dir = get_option('prefix') / 'lib' / 'lv2'
     endif
 endif
 
-plugin_install_dir = plugin_install_dir / 'everb.lv2'
+lv2_install_dir = lv2_install_dir / lv2_bundle
 
 plugin = shared_module ('everb',
     everb_sources,
     name_prefix : '',
     dependencies : [ lvtk_dep, juce_dep ],
     install : true,
-    install_dir : plugin_install_dir,
+    install_dir : lv2_install_dir,
     gnu_symbol_visibility : 'hidden'
 )
 
@@ -42,7 +48,7 @@ ui = shared_module ('everb-ui',
     dependencies : [ lvtk_opengl_dep ],
     include_directories : [ '.' ],
     install : true,
-    install_dir : plugin_install_dir,
+    install_dir : lv2_install_dir,
     cpp_args : [ ],
     gnu_symbol_visibility : 'hidden'
 )
@@ -56,7 +62,7 @@ manifest_ttl = configure_file (
         'UI_TYPE' : everb_ui_type
     },
     install : true,
-    install_dir : plugin_install_dir
+    install_dir : lv2_install_dir
 )
 
 everb_ttl = configure_file (
@@ -64,7 +70,7 @@ everb_ttl = configure_file (
     output : 'everb.ttl',
     copy : true,
     install : true,
-    install_dir : plugin_install_dir
+    install_dir : lv2_install_dir
 )
 
 lv2_validate = find_program ('lv2_validate', required : false)

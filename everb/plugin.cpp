@@ -17,11 +17,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <lvtk/plugin.hpp>
 #include <lvtk/memory.hpp>
+#include <lvtk/plugin.hpp>
 
-#include "ports.hpp"
 #include "everb.hpp"
+#include "ports.hpp"
 
 #define EVERB_URI "https://kushview.net/plugins/everb"
 
@@ -34,7 +34,7 @@ public:
 
     ~Module() {}
 
-    void connect_port (uint32_t port, void* data) {        
+    void connect_port (uint32_t port, void* data) {
         switch (port) {
             case Ports::AudioIn_1:
                 input[0] = (float*) data;
@@ -86,15 +86,9 @@ public:
 
     void run (uint32_t _nframes) noexcept {
         const auto nframes = static_cast<int> (_nframes);
-        
+
         const auto& vp = verb.getParameters();
-        if (vp.damping != params.damping ||
-            vp.dryLevel != params.dryLevel ||
-            vp.freezeMode != params.freezeMode ||
-            vp.roomSize != params.roomSize ||
-            vp.wetLevel != params.wetLevel ||
-            vp.width != params.width) 
-        {
+        if (vp.damping != params.damping || vp.dryLevel != params.dryLevel || vp.freezeMode != params.freezeMode || vp.roomSize != params.roomSize || vp.wetLevel != params.wetLevel || vp.width != params.width) {
             verb.setParameters (params);
         }
 

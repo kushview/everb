@@ -123,12 +123,9 @@ public:
         if (! (port >= Ports::Wet && port <= Ports::Width))
             return;
 
-        auto index = static_cast<int> (port - Ports::Wet);
+        auto index  = static_cast<int> (port - Ports::Wet);
         auto dvalue = static_cast<double> (value);
         sliders[index]->set_value (dvalue, lvtk::Notify::NONE);
-        // std::clog << "[roboverb] slider_min ("<< sliders[index]->range().min <<")\n";
-        // std::clog << "[roboverb] slider_max ("<< sliders[index]->range().max <<")\n";
-        // std::clog << "[roboverb] slider_value ("<< sliders[index]->value() <<")\n";
     }
 
 protected:
@@ -159,7 +156,6 @@ protected:
 private:
     std::vector<lvtk::Slider*> sliders;
     std::vector<ControlLabel*> labels;
-    bool _show_toggle_text { true };
 };
 
 struct ScopedFlag {
@@ -167,6 +163,8 @@ struct ScopedFlag {
         value = set;
     }
     ~ScopedFlag() { value = original; }
+
+private:
     const bool original;
     bool& value;
 };
@@ -176,7 +174,6 @@ public:
     eVerbUI (const lvtk::UIArgs& args)
         : UI (args),
           _main (lvtk::Mode::MODULE, std::make_unique<lvtk::OpenGL>()) {
-        
         for (const auto& opt : lvtk::OptionArray (options())) {
             if (opt.key == map_uri (LV2_UI__scaleFactor))
                 m_scale_factor = *(float*) opt.value;

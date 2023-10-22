@@ -109,7 +109,7 @@ public:
         }
 
         show_all();
-        set_size (640 * 0.72, 360 * 0.72);
+        set_size (int (640 * 0.72), int(360 * 0.72));
     }
 
     ~Content() {
@@ -136,7 +136,7 @@ protected:
         for (int i = 0; i < 5; ++i) {
             auto r = sb.slice_top (h);
 
-            auto sr = r.slice_top (r.height * 0.3333);
+            auto sr = r.slice_top (int (r.height * 0.3333));
             sr.slice_left (6);
             labels[i]->set_bounds (sr);
             r.slice_top (1);

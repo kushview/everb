@@ -1,4 +1,5 @@
 *
 !lvtk.wrap
-!.ignore
+!juce.wrap
 !.gitignore
+!.ignore

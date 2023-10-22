@@ -1,23 +1,38 @@
 project ('everb', ['c', 'cpp'], 
     version : '1.0.0',
-    default_options : [ 'cpp_std=c++17' ])
+    default_options : [ 
+        'cpp_std=c++17', 
+        'default_library=static',
+        'b_ndebug=if-release',
+        'buildtype=release',
+        'c_std=c99',
+    ])
 
-juce_proj = subproject ('juce', default_options: [])
-juce_dep = juce_proj.get_variable ('juce_dep')
+add_global_arguments (['-DLVTK_STATIC=1', '-DPUGL_STATIC=1'], 
+    language : [ 'c', 'cpp' ])
 
-lvtk_proj = subproject ('lvtk', 
-    default_options: [
-        'demo=disabled',
-        'bindings=disabled',
-        'test=disabled',
-        'doc=disabled',
-        'plugins=disabled',
-        'default_library=static'
-    ]
+lvtk_opts = [
+    'doc=disabled',
+    'test=disabled',
+    'demo=enabled',
+    'default_library=static'
+]
+
+lvtk_dep = dependency ('lvtk-3', 
+    fallback : [ 'lvtk', 'lvtk_dep' ],
+    version : '>= 3.0.0',
+    default_options : lvtk_opts,
+    required : true
 )
 
-libeverb_static = static_library ('everb-static', '''
-    everb.cpp
-'''.split())
+lvtk_opengl_dep = dependency ('lvtk-opengl-3', 
+    fallback : [ 'lvtk', 'lvtk_opengl_dep' ],
+    version : '>= 3.0.0',
+    default_options : lvtk_opts,
+    required : true
+)
+
+juce_proj = subproject ('juce')
+juce_dep = juce_proj.get_variable ('juce_dep')
 
 subdir ('everb.lv2')

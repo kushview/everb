@@ -1,15 +1,17 @@
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
-@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
-@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
-@prefix ui:    <http://lv2plug.in/ns/extensions/ui#> .
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix ui:   <http://lv2plug.in/ns/extensions/ui#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
 <https://kushview.net/plugins/everb>
 	a lv2:Plugin ;
-	lv2:binary <@PLUGIN_BINARY@> ;
+    doap:name "eVerb" ;
+	lv2:binary <@BINARY@> ;
 	rdfs:seeAlso <everb.ttl> .
 
-<https://kushview.net/plugins/everb#ui>
-	a ui:@UI_TYPE@ ;
-	lv2:binary <@UI_BINARY@> ;
-	rdfs:seeAlso <everb.ttl> .
+<https://kushview.net/plugins/everb/ui>
+    a ui:@UI_TYPE@ ;
+    lv2:binary <@UI_BINARY@> ;
+    lv2:optionalFeature ui:idleInterface ;
+    lv2:optionalFeature ui:noUserResize, ui:touch ;
+    lv2:extensionData ui:idleInterface .

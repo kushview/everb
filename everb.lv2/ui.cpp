@@ -1,33 +1,188 @@
-// Copyright 2022 Michael Fisher <mfisher@lvtk.org>
-// SPDX-License-Identifier: ISC
+/*
+    This file is part of Roboverb
+
+    Copyright (C) 2015-2023  Kushview, LLC.  All rights reserved.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include <algorithm>
 #include <iostream>
 
+#include <lvtk/memory.hpp>
+
+#include <lvtk/ui.hpp>
+#include <lvtk/ui/button.hpp>
+#include <lvtk/ui/opengl.hpp>
+#include <lvtk/ui/slider.hpp>
+#include <lvtk/ui/widget.hpp>
+
 #include <lvtk/ext/idle.hpp>
 #include <lvtk/ext/parent.hpp>
 #include <lvtk/ext/resize.hpp>
-#include <lvtk/lvtk.h>
-#include <lvtk/options.hpp>
-#include <lvtk/ui.hpp>
-
-#include <lvtk/ui/main.hpp>
-#include <lvtk/ui/opengl.hpp>
-#include <lvtk/ui/widget.hpp>
-
 #include <lvtk/ext/urid.hpp>
-#include <lvtk/weak_ref.hpp>
 
-using namespace lvtk;
+#include <lvtk/options.hpp>
 
-class VolumeUI final : public UI<VolumeUI, Parent, Idle, URID, Options> {
+#include "ports.hpp"
+
+#define EVERB_UI_URI "https://kushview.net/plugins/everb/ui"
+
+using Slider = lvtk::Slider;
+
+class ControlLabel : public lvtk::Widget {
 public:
-    VolumeUI (const UIArgs& args)
-        : UI (args) {
-        for (const auto& opt : OptionArray (options())) {
+    ControlLabel (const std::string& text) {
+        set_name (text);
+        _text = name();
+    }
+
+    void paint (lvtk::Graphics& g) override {
+        g.set_color (0xffffffff);
+        g.set_font (lvtk::Font (11.f));
+        g.draw_text (_text, bounds().at (0).as<float>(), _align);
+    }
+
+    void set_text (const std::string& text) {
+        _text = text;
+        repaint();
+    }
+
+private:
+    lvtk::Align _align { lvtk::Align::LEFT_MIDDLE };
+    std::string _text;
+};
+
+class Content : public lvtk::Widget {
+public:
+    std::function<void (uint32_t, float)> on_control_changed;
+
+    Content() {
+        set_opaque (true);
+
+        for (int i = Ports::Wet; i <= Ports::Width; ++i) {
+            auto s = add (new lvtk::Slider());
+            s->set_range (0.0, 1.0);
+            s->set_type (Slider::HORIZONTAL_BAR);
+
+            s->on_value_changed = [&, i, s]() {
+                if (on_control_changed) {
+                    const auto port  = static_cast<uint32_t> (i);
+                    const auto value = static_cast<float> (s->value());
+                    on_control_changed (port, value);
+                }
+            };
+
+            sliders.push_back (s);
+
+            std::string text = "";
+            switch (i) {
+                case Ports::Wet:
+                    text = "Wet level";
+                    break;
+                case Ports::Dry:
+                    text = "Dry level";
+                    break;
+                case Ports::RoomSize:
+                    text = "Room size";
+                    break;
+                case Ports::Damping:
+                    text = "Damping";
+                    break;
+                case Ports::Width:
+                    text = "Width";
+                    break;
+            }
+
+            labels.push_back (add (new ControlLabel (text)));
+        }
+
+        show_all();
+        set_size (640 * 0.72, 360 * 0.72);
+    }
+
+    ~Content() {
+        for (auto s : sliders)
+            delete s;
+        sliders.clear();
+    }
+
+    template <typename Ft>
+    void update_slider (uint32_t port, Ft value) {
+        if (! (port >= Ports::Wet && port <= Ports::Width))
+            return;
+
+        auto index = static_cast<int> (port - Ports::Wet);
+        auto dvalue = static_cast<double> (value);
+        sliders[index]->set_value (dvalue, lvtk::Notify::NONE);
+        // std::clog << "[roboverb] slider_min ("<< sliders[index]->range().min <<")\n";
+        // std::clog << "[roboverb] slider_max ("<< sliders[index]->range().max <<")\n";
+        // std::clog << "[roboverb] slider_value ("<< sliders[index]->value() <<")\n";
+    }
+
+protected:
+    void resized() override {
+        auto sb = bounds().at (0);
+        sb.slice_top (33);
+        int h = sb.height / 5;
+        for (int i = 0; i < 5; ++i) {
+            auto r = sb.slice_top (h);
+
+            auto sr = r.slice_top (r.height * 0.3333);
+            sr.slice_left (6);
+            labels[i]->set_bounds (sr);
+            r.slice_top (1);
+            sliders[i]->set_bounds (r.smaller (3, 2));
+        }
+    }
+
+    void paint (lvtk::Graphics& g) override {
+        g.set_color (0xff242222);
+        g.fill_rect (bounds().at (0));
+        g.set_color (0xccffffff);
+        g.draw_text ("  eVerb",
+                     bounds().at (0).smaller (3, 4).as<float>(),
+                     lvtk::Align::TOP_LEFT);
+    }
+
+private:
+    std::vector<lvtk::Slider*> sliders;
+    std::vector<ControlLabel*> labels;
+    bool _show_toggle_text { true };
+};
+
+struct ScopedFlag {
+    ScopedFlag (bool& val, bool set) : original (val), value (val) {
+        value = set;
+    }
+    ~ScopedFlag() { value = original; }
+    const bool original;
+    bool& value;
+};
+
+class eVerbUI final : public lvtk::UI<eVerbUI, lvtk::Parent, lvtk::Idle, lvtk::URID, lvtk::Options> {
+public:
+    eVerbUI (const lvtk::UIArgs& args)
+        : UI (args),
+          _main (lvtk::Mode::MODULE, std::make_unique<lvtk::OpenGL>()) {
+        
+        for (const auto& opt : lvtk::OptionArray (options())) {
             if (opt.key == map_uri (LV2_UI__scaleFactor))
                 m_scale_factor = *(float*) opt.value;
         }
+
+        widget();
     }
 
     void cleanup() {
@@ -39,130 +194,39 @@ public:
         return 0;
     }
 
-    void port_event (uint32_t port, uint32_t size,
-                     uint32_t format, const void* buffer) {}
+    bool _block_sending { false };
+
+    void send_control (uint32_t port, float value) {
+        if (_block_sending)
+            return;
+        write (port, value);
+    }
+
+    void port_event (uint32_t port, uint32_t size, uint32_t format, const void* buffer) {
+        if (format != 0 || size != sizeof (float))
+            return;
+
+        ScopedFlag sf (_block_sending, true);
+        content->update_slider ((int) port, lvtk::read_unaligned<float> (buffer));
+    }
 
     LV2UI_Widget widget() {
         if (content == nullptr) {
             content = std::make_unique<Content>();
-            content->set_size (360, 240);
-            content->set_visible (true);
             _main.elevate (*content, 0, (uintptr_t) parent.get());
+            content->set_visible (true);
+            content->on_control_changed = std::bind (
+                &eVerbUI::send_control, this, std::placeholders::_1, std::placeholders::_2);
         }
 
-        return *content;
+        return (LV2UI_Widget) content->find_handle();
     }
 
 private:
-    lvtk::Main _main { lvtk::Mode::MODULE, std::make_unique<lvtk::OpenGL>() };
-
-    class Button : public Widget {
-    public:
-        Button()          = default;
-        virtual ~Button() = default;
-
-        void paint (Graphics& g) override {
-            g.set_color (color);
-            g.fill_rect (bounds().at (0, 0).as<float>());
-        }
-
-        bool obstructed (int x, int y) override {
-            return true;
-        }
-
-        void pressed (const Event& ev) override {
-            std::clog << name() << "   down: "
-                      << ev.pos.str() << " bounds: "
-                      << bounds().str() << std::endl;
-        }
-
-        void released (const Event& ev) override {
-            std::clog << name() << "     up: "
-                      << ev.pos.str() << std::endl;
-        }
-
-        Color color { 0xff0000ff };
-    };
-
-    class Container : public Widget {
-    public:
-        Container() {
-            add (button1);
-            button1.set_visible (true);
-            button1.set_name ("button1");
-            add (button2);
-            button2.set_name ("button2");
-            button2.set_visible (true);
-        }
-
-        void resized() override {
-            auto r1 = bounds().at (0, 0);
-            // std::clog << "container resized: " << r1.str() << std::endl;
-            r1.width /= 2;
-            auto r2           = r1;
-            r2.x              = r1.width;
-            const int padding = 12;
-            r1.x += padding;
-            r1.y += padding;
-            r1.width -= (padding * 2);
-            r1.height -= (padding * 2);
-            r2.x += padding;
-            r2.y += padding;
-            r2.width -= (padding * 2);
-            r2.height -= (padding * 2);
-
-            button1.set_bounds (r1);
-            button2.set_bounds (r2);
-        }
-
-        void paint (Graphics& g) override {
-            g.set_color (0x777777FF);
-            g.fill_rect (bounds().at (0, 0).as<float>());
-        }
-
-        Button button1, button2;
-    };
-
-    class Content : public Widget {
-    public:
-        Content() {
-            set_name ("lvtk::VolumeUI::Content");
-            add (buttons);
-            buttons.set_visible (true);
-            set_size (360, 240);
-            set_visible (true);
-
-            // std::clog << "created VolumeUI content\n";
-        }
-
-        ~Content() {
-        }
-
-        void motion (const Event& ev) override {
-            // std::clog << "volume content motion\n";
-        }
-
-        void resized() override {
-            auto r = bounds().at (0, 0);
-            r.x    = 20;
-            r.y    = 20;
-            r.width -= (r.x * 2);
-            r.height -= (r.y * 2);
-            buttons.set_bounds (r);
-        }
-
-        void paint (Graphics& g) override {
-            g.set_color (Color (0x545454ff));
-            g.fill_rect (bounds().at (0, 0).as<float>());
-        }
-
-    private:
-        Container buttons;
-    };
-    std::unique_ptr<Widget> content;
-
     float m_scale_factor { 1.f };
+    lvtk::Main _main;
+    std::unique_ptr<Content> content;
 };
 
-static UIDescriptor<VolumeUI> sVolumeUI (
-    LVTK_PLUGINS__VolumeUI, {});
+static lvtk::UIDescriptor<eVerbUI> __eVerbUI (
+    EVERB_UI_URI, { LV2_UI__parent });

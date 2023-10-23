@@ -46,6 +46,4 @@ juce_dep = juce_proj.get_variable ('juce_dep')
 
 subdir ('everb')
 
-summary ('Bundle', lv2_bundle, section : 'LV2')
-summary ('Install', lv2_install_dir, section : 'Paths')
-
+summary ('Install', lv2_install_dir, section : 'LV2')

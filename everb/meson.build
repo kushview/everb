@@ -18,16 +18,21 @@ elif host_machine.system() == 'darwin'
     everb_ui_type = 'CocoaUI'
 endif
 
-lv2_install_dir = fs.expanduser (get_option ('lv2dir')).strip()
+
+lv2_install_dir = get_option ('lv2dir').strip()
+if lv2_install_dir != ''
+    lv2_install_dir = fs.expanduser (lv2_install_dir)
+endif
+
 if lv2_install_dir == ''
     if target_machine.system() == 'darwin'
-        lv2_install_dir = '/Library/Audio/Plug-Ins/LV2'
+        lv2_install_dir = fs.expanduser ('~/Library/Audio/Plug-Ins/LV2')
     elif target_machine.system() == 'haiku'
         lv2_install_dir = '/boot/common/add-ons/lv2'
     elif target_machine.system() == 'windows'
-        lv2_install_dir = 'C:/Program Files/Common Files/LV2'
+        lv2_install_dir = fs.expanduser ('~/AppData/Roaming/LV2')
     else
-        lv2_install_dir = get_option('prefix') / 'lib' / 'lv2'
+        lv2_install_dir = fs.expanduser('~/.lv2')
     endif
 endif
 

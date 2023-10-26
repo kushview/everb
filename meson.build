@@ -23,7 +23,7 @@ endif
 lvtk_opts = [
     'doc=disabled',
     'test=disabled',
-    'demo=enabled',
+    'demo=disabled',
     'default_library=static'
 ]
 

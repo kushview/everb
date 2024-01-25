@@ -60,7 +60,7 @@ public:
     }
 
 private:
-    lvtk::Align _align { lvtk::Align::LEFT_MIDDLE };
+    lvtk::Justify _align { lvtk::Justify::MID_LEFT };
     std::string _text;
 };
 
@@ -150,7 +150,7 @@ protected:
         g.set_color (0xccffffff);
         g.draw_text ("  eVerb",
                      bounds().at (0).smaller (3, 4).as<float>(),
-                     lvtk::Align::TOP_LEFT);
+                     lvtk::Justify::TOP_LEFT);
     }
 
 private:

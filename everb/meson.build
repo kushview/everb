@@ -44,6 +44,7 @@ plugin = shared_module ('everb',
     dependencies : [ lvtk_dep, juce_dep ],
     install : true,
     install_dir : lv2_install_dir,
+    link_args : [ nodelete_cpp_link_args ],
     gnu_symbol_visibility : 'hidden'
 )
 

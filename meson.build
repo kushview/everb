@@ -15,6 +15,8 @@ if host_machine.system() == 'darwin'
   objcpp = meson.get_compiler ('objcpp')
 endif
 
+nodelete_cpp_link_args = meson.get_compiler('cpp').get_supported_link_arguments(['-Wl,-z,nodelete'])
+
 if not meson.is_subproject()
     add_global_arguments (['-DLVTK_STATIC=1', '-DPUGL_STATIC=1'], 
         language : [ 'c', 'cpp' ])
@@ -23,7 +25,7 @@ endif
 lvtk_opts = [
     'doc=disabled',
     'test=disabled',
-    'demo=disabled',
+    'demo=enabled',
     'default_library=static'
 ]
 

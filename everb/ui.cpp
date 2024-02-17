@@ -60,7 +60,7 @@ public:
     }
 
 private:
-    lvtk::Justify _align { lvtk::Justify::MID_LEFT };
+    lvtk::Justify _align { lvtk::Justify::CENTERED };
     std::string _text;
 };
 
@@ -72,9 +72,10 @@ public:
         set_opaque (true);
 
         for (int i = Ports::Wet; i <= Ports::Width; ++i) {
-            auto s = add (new lvtk::Slider());
+            auto s = add (new lvtk::Dial());
             s->set_range (0.0, 1.0);
-            s->set_type (Slider::HORIZONTAL_BAR);
+            // s->set_range ()
+            // s->set_type (Slider::HORIZONTAL_BAR);
 
             s->on_value_changed = [&, i, s]() {
                 if (on_control_changed) {
@@ -132,15 +133,13 @@ protected:
     void resized() override {
         auto sb = bounds().at (0);
         sb.slice_top (33);
-        int h = sb.height / 5;
+        int h = sb.width / 5;
         for (int i = 0; i < 5; ++i) {
-            auto r = sb.slice_top (h);
-
-            auto sr = r.slice_top (int (r.height * 0.3333));
-            sr.slice_left (6);
-            labels[i]->set_bounds (sr);
-            r.slice_top (1);
-            sliders[i]->set_bounds (r.smaller (3, 2));
+            auto cr = sb.slice_left (h);
+            auto dial = sliders[i];
+            auto label = labels[i];
+            dial->set_bounds (cr.slice_top (h));
+            label->set_bounds (cr.slice_top (24));
         }
     }
 
@@ -154,7 +153,7 @@ protected:
     }
 
 private:
-    std::vector<lvtk::Slider*> sliders;
+    std::vector<lvtk::Dial*> sliders;
     std::vector<ControlLabel*> labels;
 };
 
@@ -175,8 +174,8 @@ public:
         : UI (args),
           _main (lvtk::Mode::MODULE, std::make_unique<lvtk::Cairo>()) {
         for (const auto& opt : lvtk::OptionArray (options())) {
-            if (opt.key == map_uri (LV2_UI__scaleFactor))
-                m_scale_factor = *(float*) opt.value;
+            // if (opt.key == map_uri (LV2_UI__scaleFactor))
+            //     m_scale_factor = *(float*) opt.value;
         }
 
         widget();
@@ -220,7 +219,6 @@ public:
     }
 
 private:
-    float m_scale_factor { 1.f };
     lvtk::Main _main;
     std::unique_ptr<Content> content;
 };

@@ -74,8 +74,6 @@ public:
         for (int i = Ports::Wet; i <= Ports::Width; ++i) {
             auto s = add (new lvtk::Dial());
             s->set_range (0.0, 1.0);
-            // s->set_range ()
-            // s->set_type (Slider::HORIZONTAL_BAR);
 
             s->on_value_changed = [&, i, s]() {
                 if (on_control_changed) {
@@ -110,7 +108,7 @@ public:
         }
 
         show_all();
-        set_size (int (640 * 0.72), int(360 * 0.72));
+        set_size (int (640 * 0.8), 150);
     }
 
     ~Content() {
@@ -132,7 +130,7 @@ public:
 protected:
     void resized() override {
         auto sb = bounds().at (0);
-        sb.slice_top (33);
+        sb.slice_top(10);
         int h = sb.width / 5;
         for (int i = 0; i < 5; ++i) {
             auto cr = sb.slice_left (h);
@@ -147,9 +145,9 @@ protected:
         g.set_color (0xff242222);
         g.fill_rect (bounds().at (0));
         g.set_color (0xccffffff);
-        g.draw_text ("  eVerb",
-                     bounds().at (0).smaller (3, 4).as<float>(),
-                     lvtk::Justify::TOP_LEFT);
+        g.draw_text ("   eVerb",
+                     bounds().at (0).slice_top(24).smaller (3, 4).as<float>(),
+                     lvtk::Justify::MID_LEFT);
     }
 
 private:

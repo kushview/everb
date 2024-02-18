@@ -18,14 +18,14 @@ endif
 nodelete_cpp_link_args = meson.get_compiler('cpp').get_supported_link_arguments(['-Wl,-z,nodelete'])
 
 if not meson.is_subproject()
-    add_global_arguments (['-DLVTK_STATIC=1', '-DPUGL_STATIC=1'], 
+    add_project_arguments (['-DLVTK_STATIC=1', '-DPUGL_STATIC=1'], 
         language : [ 'c', 'cpp' ])
 endif
 
 lvtk_opts = [
     'doc=disabled',
     'test=disabled',
-    'demo=enabled',
+    'demo=disabled',
     'default_library=static'
 ]
 
@@ -46,6 +46,6 @@ lvtk_cairo_dep = dependency ('lvtk-cairo-3',
 juce_proj = subproject ('juce')
 juce_dep = juce_proj.get_variable ('juce_dep')
 
-subdir ('everb')
+subdir ('src')
 
 summary ('Install', lv2_install_dir, section : 'LV2')

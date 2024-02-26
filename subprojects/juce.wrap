@@ -2,6 +2,7 @@
 url = https://gitlab.com/kushview/juce.git
 push-url = git@gitlab.com:kushview/juce.git
 revision = main
+depth = 1
 
 [provide]
 juce-7=juce_dep

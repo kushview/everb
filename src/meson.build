@@ -55,6 +55,7 @@ ui = shared_module ('everb-ui',
     include_directories : [ '.' ],
     install : true,
     install_dir : lv2_install_dir,
+    link_args : [ nodelete_cpp_link_args ],
     cpp_args : [ ],
     gnu_symbol_visibility : 'hidden'
 )

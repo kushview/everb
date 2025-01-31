@@ -1,0 +1,515 @@
+#include <cstring>
+#include <memory>
+
+#include <clap/clap.h>
+
+#include "everb.hpp"
+#include "ports.hpp"
+
+struct eVerb {
+    clap_plugin_t plugin;
+    Reverb reverb;
+    Reverb::Parameters params;
+
+    mutable std::mutex params_mutex;
+
+    std::vector<clap_audio_port_info_t> ins, outs;
+    std::vector<clap_param_info_t> param_info;
+
+    Reverb::Parameters safe_params() const noexcept {
+        Reverb::Parameters out_params;
+        {
+            std::lock_guard<std::mutex> sl (params_mutex);
+            out_params = params;
+        }
+        return out_params;
+    }
+
+    void update (clap_id param_id, double value) noexcept {
+        switch (param_id) {
+            case Ports::Damping:
+                params.damping = static_cast<float> (value);
+                break;
+            case Ports::Dry:
+                params.dryLevel = static_cast<float> (value);
+                break;
+            case Ports::RoomSize:
+                params.roomSize = static_cast<float> (value);
+                break;
+            case Ports::Wet:
+                params.wetLevel = static_cast<float> (value);
+                break;
+            case Ports::Width:
+                params.width = static_cast<float> (value);
+                break;
+        }
+    }
+
+    void update (const clap_event_param_value_t* value) noexcept {
+        update (value->param_id, value->value);
+    }
+
+    void apply_params() {
+        reverb.setParameters (params);
+    }
+};
+
+namespace detail {
+inline static eVerb& from (const clap_plugin_t* plugin) {
+    return *reinterpret_cast<eVerb*> (plugin->plugin_data);
+}
+
+inline static void copy_name (char* dst, const char* src) {
+    const auto name = juce::String::fromUTF8 (src);
+    std::strncpy (dst, name.toRawUTF8() , name.getNumBytesAsUTF8());
+    dst[name.getNumBytesAsUTF8()] = '\0';
+}
+
+} // namespace detail
+
+static const clap_plugin_audio_ports_t _audio_ports = {
+    .count = [] (const clap_plugin_t* plugin, bool is_input) -> uint32_t {
+        auto& self = detail::from (plugin);
+        auto& vec  = is_input ? self.ins : self.outs;
+        return vec.size();
+    },
+
+    // Get info about an audio port.
+    // Returns true on success and stores the result into info.
+    // [main-thread]
+    .get = [] (const clap_plugin_t* plugin, uint32_t index, bool is_input,
+               clap_audio_port_info_t* info) -> bool {
+        auto& self = detail::from (plugin);
+        auto& vec  = is_input ? self.ins : self.outs;
+        if (index < vec.size()) {
+            *info = vec[index];
+            return true;
+        }
+        return false;
+    }
+};
+
+// Must be called after creating the plugin.
+// If init returns false, the host must destroy the plugin instance.
+// If init returns true, then the plugin is initialized and in the deactivated state.
+// Unlike in `plugin-factory::create_plugin`, in init you have complete access to the host
+// and host extensions, so clap related setup activities should be done here rather than in
+// create_plugin.
+// [main-thread]
+static bool everb_init (const clap_plugin_t* plugin) {
+    auto& self = detail::from (plugin);
+
+    /* audio ports */
+    clap_audio_port_info_t info;
+    info.flags         = 0;
+    info.id            = 0;
+    info.in_place_pair = CLAP_INVALID_ID;
+    info.channel_count = 2;
+    info.port_type     = CLAP_PORT_STEREO;
+
+    detail::copy_name (info.name, "Input");
+    self.ins.push_back (info);
+    detail::copy_name (info.name, "Output");
+    self.outs.push_back (info);
+
+    /* parameters */
+    const Reverb::Parameters defaults;
+    self.reverb.reset();
+    self.reverb.setParameters (defaults);
+
+    for (uint32_t id = Ports::Wet; id <= Ports::Width; ++id) {
+        clap_param_info_t param;
+        detail::copy_name (param.module, "Reverb");
+        param.cookie    = nullptr;
+        param.flags     = 0;
+        param.id        = id;
+        param.min_value = 0.0;
+        param.max_value = 1.0;
+
+        switch (id) {
+            case Ports::Wet:
+                detail::copy_name (param.name, "Wet");
+                param.default_value = defaults.wetLevel;
+                break;
+            case Ports::Dry:
+                detail::copy_name (param.name, "Dry");
+                param.default_value = defaults.dryLevel;
+                break;
+            case Ports::RoomSize:
+                detail::copy_name (param.name, "Room Size");
+                param.default_value = defaults.roomSize;
+                break;
+            case Ports::Damping:
+                detail::copy_name (param.name, "Damping");
+                param.default_value = defaults.damping;
+                break;
+            case Ports::Width:
+                detail::copy_name (param.name, "Width");
+                param.default_value = defaults.width;
+                break;
+        }
+
+        self.param_info.push_back (param);
+    }
+
+    return true;
+}
+
+// Free the plugin and its resources.
+// It is required to deactivate the plugin prior to this call.
+// [main-thread & !active]
+static void everb_destroy (const clap_plugin_t* plugin) {
+    delete (eVerb*) plugin->plugin_data;
+}
+
+// Activate and deactivate the plugin.
+// In this call the plugin may allocate memory and prepare everything needed for the process
+// call. The process's sample rate will be constant and process's frame count will included in
+// the [min, max] range, which is bounded by [1, INT32_MAX].
+// In this call the plugin may call host-provided methods marked [being-activated].
+// Once activated the latency and port configuration must remain constant, until deactivation.
+// Returns true on success.
+// [main-thread & !active]
+static bool everb_activate (const clap_plugin_t* plugin,
+                            double sample_rate,
+                            uint32_t min_frames_count,
+                            uint32_t max_frames_count) {
+    auto& self = detail::from (plugin);
+    self.reverb.setSampleRate (sample_rate);
+    return true;
+}
+// [main-thread & active]
+static void everb_deactivate (const clap_plugin_t* plugin) {
+    juce::ignoreUnused (plugin);
+}
+
+// Call start processing before processing.
+// Returns true on success.
+// [audio-thread & active & !processing]
+static bool everb_start_processing (const clap_plugin_t* plugin) {
+    juce::ignoreUnused (plugin);
+    return true;
+}
+
+// Call stop processing before sending the plugin to sleep.
+// [audio-thread & active & processing]
+static void everb_stop_processing (const clap_plugin_t* plugin) {
+    juce::ignoreUnused (plugin);
+}
+
+// - Clears all buffers, performs a full reset of the processing state (filters, oscillators,
+//   envelopes, lfo, ...) and kills all voices.
+// - The parameter's value remain unchanged.
+// - clap_process.steady_time may jump backward.
+//
+// [audio-thread & active]
+static void everb_reset (const clap_plugin_t* plugin) {
+    detail::from (plugin).reverb.reset();
+}
+
+// process audio, events, ...
+// All the pointers coming from clap_process_t and its nested attributes,
+// are valid until process() returns.
+// [audio-thread & active & processing]
+static clap_process_status everb_process (const clap_plugin_t* plugin,
+                                          const clap_process_t* process) {
+    auto& self  = detail::from (plugin);
+    auto num_in = process->in_events->size (process->in_events);
+
+    {
+        std::lock_guard<std::mutex> sl (self.params_mutex);
+        bool param_changed = false;
+        for (uint32_t i = 0; i < num_in; ++i) {
+            auto ev = process->in_events->get (process->in_events, i);
+            switch (ev->type) {
+                case CLAP_EVENT_PARAM_VALUE: {
+                    auto pv = (const clap_event_param_value_t*) ev;
+                    self.update (pv);
+                    param_changed = true;
+                    break;
+                }
+            }
+        }
+
+        if (param_changed)
+            self.apply_params();
+    }
+
+    auto& ain  = process->audio_inputs[0];
+    auto& aout = process->audio_outputs[0];
+    self.reverb.processStereo (ain.data32[0],
+                               ain.data32[1],
+                               aout.data32[0],
+                               aout.data32[1],
+                               static_cast<int> (process->frames_count));
+
+    return CLAP_PROCESS_CONTINUE;
+}
+
+// Called by the host on the main thread in response to a previous call to:
+//   host->request_callback(host);
+// [main-thread]
+static void everb_on_main_thread (const clap_plugin_t* plugin) {
+    juce::ignoreUnused (plugin);
+}
+
+//==============================================================================
+// Params
+
+#if 0
+namespace clap {
+
+class plugin_params {
+public:
+    using clap_type = clap_plugin_params_t;
+    using size_type = size_t;
+    plugin_params() {
+        init();
+    }
+    ~plugin_params() {}
+
+    const clap_type* c_obj() const noexcept { return &_params; }
+    inline operator const clap_type*() const noexcept { return &_params;}
+    constexpr size_type size() const noexcept { return _vec.size(); }
+
+private:
+    clap_plugin_params_t _params;
+    std::vector<clap_param_info_t> _vec;
+    void init() {
+        _params.count = &_count;
+    }
+    static uint32_t _count (const clap_plugin_t* plugin)
+};
+
+}
+#endif
+
+// Returns the number of parameters.
+// [main-thread]
+static uint32_t everb_params_count (const clap_plugin_t* plugin) {
+    auto& self = detail::from (plugin);
+    return self.param_info.size();
+}
+
+// Copies the parameter's info to param_info.
+// Returns true on success.
+// [main-thread]
+static bool everb_params_get_info (const clap_plugin_t* plugin,
+                                   uint32_t param_index,
+                                   clap_param_info_t* param_info) {
+    auto& self = detail::from (plugin);
+    if (param_index < everb_params_count (plugin)) {
+        *param_info = self.param_info[param_index];
+        return true;
+    }
+
+    return false;
+}
+
+// Writes the parameter's current value to out_value.
+// Returns true on success.
+// [main-thread]
+static bool everb_params_get_value (const clap_plugin_t* plugin, clap_id param_id, double* out_value) {
+    auto& self = detail::from (plugin);
+    for (const auto& param : self.param_info) {
+        if (param.id == param_id) {
+            const auto vals = self.safe_params();
+            switch (param_id) {
+                case Ports::Wet:
+                    *out_value = vals.wetLevel;
+                    break;
+                case Ports::Dry:
+                    *out_value = vals.dryLevel;
+                    break;
+                case Ports::RoomSize:
+                    *out_value = vals.roomSize;
+                    break;
+                case Ports::Width:
+                    *out_value = vals.width;
+                    break;
+                case Ports::Damping:
+                    *out_value = vals.damping;
+                    break;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+// Fills out_buffer with a null-terminated UTF-8 string that represents the parameter at the
+// given 'value' argument. eg: "2.3 kHz". The host should always use this to format parameter
+// values before displaying it to the user.
+// Returns true on success.
+// [main-thread]
+static bool everb_params_value_to_text (const clap_plugin_t* plugin,
+                                        clap_id param_id,
+                                        double value,
+                                        char* out_buffer,
+                                        uint32_t out_buffer_capacity) {
+    juce::ignoreUnused (plugin, param_id);
+
+    juce::String buf (value);
+    auto size = std::min (buf.getNumBytesAsUTF8(), (size_t) out_buffer_capacity);
+    std::strncpy (out_buffer, buf.toRawUTF8(), size);
+    return true;
+}
+
+// Converts the null-terminated UTF-8 param_value_text into a double and writes it to out_value.
+// The host can use this to convert user input into a parameter value.
+// Returns true on success.
+// [main-thread]
+static bool everb_params_text_to_value (const clap_plugin_t* plugin,
+                                        clap_id param_id,
+                                        const char* param_value_text,
+                                        double* out_value) {
+    juce::ignoreUnused (plugin, param_id);
+    const auto str = juce::String::fromUTF8 (param_value_text);
+    *out_value     = str.getDoubleValue();
+    return true;
+}
+
+// Flushes a set of parameter changes.
+// This method must not be called concurrently to clap_plugin->process().
+//
+// Note: if the plugin is processing, then the process() call will already achieve the
+// parameter update (bi-directional), so a call to flush isn't required, also be aware
+// that the plugin may use the sample offset in process(), while this information would be
+// lost within flush().
+//
+// [active ? audio-thread : main-thread]
+static void everb_params_flush (const clap_plugin_t* plugin,
+                                const clap_input_events_t* in,
+                                const clap_output_events_t* out) {
+    juce::ignoreUnused (plugin, in, out);
+}
+
+static const clap_plugin_params_t _params = {
+    .count         = &everb_params_count,
+    .get_info      = &everb_params_get_info,
+    .get_value     = &everb_params_get_value,
+    .value_to_text = &everb_params_value_to_text,
+    .text_to_value = &everb_params_text_to_value,
+    .flush         = &everb_params_flush
+};
+
+//==============================================================================
+
+// Saves the plugin state into stream.
+// Returns true if the state was correctly saved.
+// [main-thread]
+static bool everb_load (const clap_plugin_t* plugin, const clap_istream_t* stream) {
+    auto& self = detail::from (plugin);
+    Reverb::Parameters params;
+    if (sizeof(params) != stream->read (stream, &params, sizeof(params)))
+        return false;
+    
+    std::lock_guard<std::mutex> sl (self.params_mutex);
+    self.params = params;
+    self.apply_params();
+    return true;
+}
+
+// Loads the plugin state from stream.
+// Returns true if the state was correctly restored.
+// [main-thread]
+static bool everb_save (const clap_plugin_t* plugin, const clap_ostream_t* stream) {
+    auto& self = detail::from (plugin);
+    auto params = self.safe_params();
+    auto total_size = (int64_t) sizeof(params);
+    return total_size == stream->write (stream, &params, total_size);
+}
+
+static const clap_plugin_state_t _state = {
+    .save = &everb_save,
+    .load = &everb_load
+};
+
+//==============================================================================
+static const clap_plugin_descriptor_t _everb = {
+    .clap_version = CLAP_VERSION,
+    .id           = "net.kushview.everb",
+    .name         = "eVerb",
+    .vendor       = "Kushview",
+    .url          = "https://github.com/kushview/everb",
+    .manual_url   = "https://github.com/kushview/everb",
+    .support_url  = "https://github.com/kushview/everb",
+    .version      = "1.0.2",
+    .description  = "A very simple reverb that uses juce::Reverb",
+    .features     = { nullptr }
+};
+
+// Query an extension.
+// The returned pointer is owned by the plugin.
+// It is forbidden to call it before plugin->init().
+// You can call it within plugin->init() call, and after.
+// [thread-safe]
+static const void* everb_get_extension (const clap_plugin_t* plugin, const char* id) {
+    juce::ignoreUnused (plugin, id);
+    if (0 == std::strcmp (id, CLAP_EXT_AUDIO_PORTS)) {
+        return &_audio_ports;
+    } else if (0 == std::strcmp (id, CLAP_EXT_PARAMS)) {
+        return &_params;
+    } else if (0 == std::strcmp (id, CLAP_EXT_STATE)) {
+        return &_state;
+    }
+
+    return nullptr;
+}
+
+static const clap_plugin_factory_t _factory = {
+    .get_plugin_count = [] (const clap_plugin_factory_t* factory) -> uint32_t {
+        return 1;
+    },
+
+    // Retrieves a plugin descriptor by its index.
+    // Returns null in case of error.
+    // The descriptor must not be freed.
+    // [thread-safe]
+    .get_plugin_descriptor = [] (const clap_plugin_factory_t* factory, uint32_t index) -> const clap_plugin_descriptor_t* {
+        return index == 0 ? &_everb : nullptr;
+    },
+
+    // Create a clap_plugin by its plugin_id.
+    // The returned pointer must be freed by calling plugin->destroy(plugin);
+    // The plugin is not allowed to use the host callbacks in the create method.
+    // Returns null in case of error.
+    // [thread-safe]
+    .create_plugin = [] (const clap_plugin_factory_t* factory, const clap_host_t*, const char* plugin_id) -> const clap_plugin_t* {
+        if (factory != &_factory || 0 != std::strcmp (plugin_id, "net.kushview.everb"))
+            return nullptr;
+
+        auto verb                = new eVerb();
+        auto plugin              = &verb->plugin;
+        plugin->desc             = &_everb;
+        plugin->plugin_data      = (void*) verb;
+        plugin->activate         = &everb_activate;
+        plugin->deactivate       = &everb_deactivate;
+        plugin->destroy          = &everb_destroy;
+        plugin->get_extension    = &everb_get_extension;
+        plugin->init             = &everb_init;
+        plugin->on_main_thread   = &everb_on_main_thread;
+        plugin->process          = &everb_process;
+        plugin->reset            = &everb_reset;
+        plugin->start_processing = &everb_start_processing;
+        plugin->stop_processing  = &everb_stop_processing;
+
+        return plugin;
+    }
+};
+
+extern "C" CLAP_EXPORT const clap_plugin_entry_t clap_entry = {
+    .clap_version = CLAP_VERSION,
+
+    .init = [] (const char* plugin_path) -> bool {
+        return true;
+    },
+
+    .deinit = []() -> void {},
+
+    .get_factory = [] (const char* factory_id) -> const void* {
+        if (0 == std::strcmp (factory_id, CLAP_PLUGIN_FACTORY_ID))
+            return (const void*) &_factory;
+        return nullptr;
+    }
+};

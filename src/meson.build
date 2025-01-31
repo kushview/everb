@@ -41,7 +41,7 @@ lv2_install_dir = lv2_install_dir / lv2_bundle
 plugin = shared_module ('everb',
     everb_sources,
     name_prefix : '',
-    dependencies : [ lvtk_dep, juce_dep ],
+    dependencies : [ lvtk_dep, juce_dep, clap_dep ],
     install : true,
     install_dir : lv2_install_dir,
     link_args : [ nodelete_cpp_link_args ],
@@ -84,3 +84,32 @@ lv2_validate = find_program ('lv2_validate', required : false)
 if lv2_validate.found()
     test ('lv2_validate', lv2_validate, args : [ manifest_ttl, everb_ttl ])
 endif
+
+# Clap
+clap_install_dir = '' # get_option ('clapdir').strip()
+if clap_install_dir != ''
+    clap_install_dir = fs.expanduser (clap_install_dir)
+endif
+
+if clap_install_dir == ''
+    if target_machine.system() == 'darwin'
+        clap_install_dir = fs.expanduser ('~/Library/Audio/Plug-Ins/CLAP')
+    elif target_machine.system() == 'haiku'
+        clap_install_dir = '/boot/common/add-ons/clap'
+    elif target_machine.system() == 'windows'
+        clap_install_dir = fs.expanduser ('~/AppData/Roaming/CLAP')
+    else
+        clap_install_dir = fs.expanduser('~/.clap')
+    endif
+endif
+
+clap_plugin = shared_module ('everb',
+    [everb_sources, 'clap.cpp'],
+    name_prefix : '',
+    name_suffix : 'clap',
+    dependencies : [ lvtk_dep, juce_dep, clap_dep ],
+    install : true,
+    install_dir : clap_install_dir,
+    link_args : [ nodelete_cpp_link_args ],
+    gnu_symbol_visibility : 'hidden'
+)

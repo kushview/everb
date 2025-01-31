@@ -46,6 +46,8 @@ lvtk_cairo_dep = dependency ('lvtk-cairo-3',
 juce_proj = subproject ('juce')
 juce_dep = juce_proj.get_variable ('juce_dep')
 
+clap_dep = dependency('clap')
+
 subdir ('src')
 
 summary ('Install', lv2_install_dir, section : 'LV2')

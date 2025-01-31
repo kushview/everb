@@ -21,6 +21,43 @@ struct eVerb {
     std::unique_ptr<lvtk::Main> gui;
     std::unique_ptr<Content> content;
 
+    const clap_host_t* host { nullptr };
+    const clap_host_timer_support_t* timer { nullptr };
+    clap_id idle_timer { CLAP_INVALID_ID };
+
+    double get_param (uint32_t param_id, const Reverb::Parameters& values)
+    {
+        switch (param_id) {
+            case Ports::Damping:
+                return values.damping;
+                break;
+            case Ports::Dry:
+                return values.dryLevel;
+                break;
+            case Ports::RoomSize:
+                return values.roomSize;
+                break;
+            case Ports::Wet:
+                return values.wetLevel;
+                break;
+            case Ports::Width:
+                return values.width;
+                break;
+        }
+
+        return 0.0;
+    }
+
+    void sync_params() {
+        if (content == nullptr)
+            return;
+        
+        const auto sp = safe_params();
+        for (uint32_t port = Ports::paramsBegin(); port < Ports::paramsEnd(); ++port) {
+            content->update_slider (port, get_param (port, sp));
+        }
+    }
+    
     Reverb::Parameters safe_params() const noexcept {
         Reverb::Parameters out_params;
         {
@@ -155,6 +192,10 @@ static bool everb_init (const clap_plugin_t* plugin) {
         }
 
         self.param_info.push_back (param);
+    }
+
+    if (auto timer = (const clap_host_timer_support_t*) self.host->get_extension (self.host, CLAP_EXT_TIMER_SUPPORT)) {
+        self.timer = timer;
     }
 
     return true;
@@ -409,9 +450,10 @@ static bool everb_load (const clap_plugin_t* plugin, const clap_istream_t* strea
     if (sizeof (params) != stream->read (stream, &params, sizeof (params)))
         return false;
 
-    std::lock_guard<std::mutex> sl (self.params_mutex);
+    {std::lock_guard<std::mutex> sl (self.params_mutex);
     self.params = params;
-    self.apply_params();
+    self.apply_params();}
+    self.sync_params();
     return true;
 }
 
@@ -443,8 +485,11 @@ static const clap_plugin_state_t _state = {
 // Returns true if the requested gui api is supported, either in floating (plugin-created)
 // or non-floating (embedded) mode.
 // [main-thread]
-static bool everb_ui_is_api_supported (const clap_plugin_t*, const char* api, bool is_floating) {
-    return ! is_floating && 0 == std::strcmp (api, EVERB_WINDOW_API);
+static bool everb_ui_is_api_supported (const clap_plugin_t* plugin,
+                                       const char* api,
+                                       bool is_floating) {
+    auto& self = detail::from (plugin);
+    return ! is_floating && self.timer != nullptr && 0 == std::strcmp (api, EVERB_WINDOW_API);
 }
 
 // Returns true if the plugin has a preferred api.
@@ -479,6 +524,12 @@ static bool everb_ui_create (const clap_plugin_t* plugin, const char* api, bool 
     if (self.content == nullptr) {
         self.gui     = std::make_unique<lvtk::Main> (lvtk::Mode::MODULE, std::make_unique<lvtk::Cairo>());
         self.content = std::make_unique<Content>();
+        self.content->on_control_changed = [&](uint32_t port, float value ) {
+            std::lock_guard<std::mutex> sl (self.params_mutex);
+            self.update (port, value);
+            self.apply_params();
+        };
+        self.timer->register_timer (self.host, 20, &self.idle_timer);
     }
 
     return true;
@@ -488,6 +539,12 @@ static bool everb_ui_create (const clap_plugin_t* plugin, const char* api, bool 
 // [main-thread]
 static void everb_ui_destroy (const clap_plugin_t* plugin) {
     auto& self = detail::from (plugin);
+
+    if (self.idle_timer != CLAP_INVALID_ID) {
+        self.timer->unregister_timer (self.host, self.idle_timer);
+        self.idle_timer = CLAP_INVALID_ID;
+    }
+
     self.content.reset();
     self.gui.reset();
 }
@@ -514,7 +571,10 @@ static bool everb_ui_set_scale (const clap_plugin_t* plugin, double scale) {
 // Returns true if the plugin could get the size.
 // [main-thread]
 static bool everb_ui_get_size (const clap_plugin_t* plugin, uint32_t* width, uint32_t* height) {
-    return false;
+    auto& self = detail::from (plugin);
+    *width     = (uint32_t) self.content->width();
+    *height    = (uint32_t) self.content->height();
+    return true;
 }
 
 // Returns true if the window is resizeable (mouse drag).
@@ -576,11 +636,8 @@ static void everb_suggest_title (const clap_plugin_t* plugin, const char* title)
 static bool everb_show (const clap_plugin_t* plugin) {
     auto& self    = detail::from (plugin);
     auto& content = *self.content;
+    self.sync_params();
     content.set_visible (true);
-
-    // content->on_control_changed = std::bind (
-    //     &eVerbUI::send_control, this, std::placeholders::_1, std::placeholders::_2);
-
     return true;
 }
 
@@ -615,6 +672,21 @@ static const clap_plugin_gui_t _gui = {
 };
 
 //==============================================================================
+static void everb_on_timer (const clap_plugin_t* plugin, clap_id timer_id) {
+    juce::ignoreUnused (timer_id);
+    auto& self = detail::from (plugin);
+    if (self.gui == nullptr)
+        return;
+    
+    if (timer_id == self.idle_timer)
+        self.gui->loop (0.0);
+}
+
+static const clap_plugin_timer_support_t _timer {
+    .on_timer = &everb_on_timer
+};
+
+//==============================================================================
 static const clap_plugin_descriptor_t _everb = {
     .clap_version = CLAP_VERSION,
     .id           = "net.kushview.everb",
@@ -641,9 +713,10 @@ static const void* everb_get_extension (const clap_plugin_t*, const char* id) {
     } else if (0 == std::strcmp (id, CLAP_EXT_STATE)) {
         return &_state;
     } else if (0 == std::strcmp (id, CLAP_EXT_GUI)) {
-        return nullptr; //&_gui;
+        return &_gui;
+    } else if (0 == std::strcmp (id, CLAP_EXT_TIMER_SUPPORT)) {
+        return &_timer;
     }
-
     return nullptr;
 }
 
@@ -665,13 +738,12 @@ static const clap_plugin_factory_t _factory = {
     // The plugin is not allowed to use the host callbacks in the create method.
     // Returns null in case of error.
     // [thread-safe]
-    .create_plugin = [] (const clap_plugin_factory_t* factory, const clap_host_t*, const char* plugin_id) -> const clap_plugin_t* {
+    .create_plugin = [] (const clap_plugin_factory_t* factory, const clap_host_t* host, const char* plugin_id) -> const clap_plugin_t* {
         if (factory != &_factory || 0 != std::strcmp (plugin_id, "net.kushview.everb"))
             return nullptr;
 
-        std::cout << "everb created!\n";
-        
         auto verb                = new eVerb();
+        verb->host               = host;
         auto plugin              = &verb->plugin;
         plugin->desc             = &_everb;
         plugin->plugin_data      = (void*) verb;

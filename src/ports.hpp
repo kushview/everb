@@ -32,4 +32,7 @@ struct Ports {
         Damping  = 7,
         Width    = 8,
     };
+
+   inline static constexpr uint32_t paramsBegin() noexcept { return Wet; }
+   inline static constexpr uint32_t paramsEnd() noexcept { return Width + 1; }
 };

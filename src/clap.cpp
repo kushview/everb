@@ -641,7 +641,7 @@ static const void* everb_get_extension (const clap_plugin_t*, const char* id) {
     } else if (0 == std::strcmp (id, CLAP_EXT_STATE)) {
         return &_state;
     } else if (0 == std::strcmp (id, CLAP_EXT_GUI)) {
-        return &_gui;
+        return nullptr; //&_gui;
     }
 
     return nullptr;

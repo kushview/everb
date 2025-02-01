@@ -55,7 +55,7 @@ class eVerbUI final : public lvtk::UI<eVerbUI, lvtk::Parent, lvtk::Idle, lvtk::U
 public:
     eVerbUI (const lvtk::UIArgs& args)
         : UI (args),
-          _main (lvtk::Mode::MODULE, std::make_unique<lvtk::Cairo>()) {
+          _main (lui::Mode::MODULE, std::make_unique<lui::Cairo>()) {
         for (const auto& opt : lvtk::OptionArray (options())) {
             lvtk::ignore (opt);
         }
@@ -101,7 +101,7 @@ public:
     }
 
 private:
-    lvtk::Main _main;
+    lui::Main _main;
     std::unique_ptr<Content> content;
 };
 

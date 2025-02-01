@@ -10,18 +10,18 @@
 
 #include "ports.hpp"
 
-using Slider = lvtk::Slider;
+using Slider = lui::Slider;
 
-class ControlLabel : public lvtk::Widget {
+class ControlLabel : public lui::Widget {
 public:
     ControlLabel (const std::string& text) {
         set_name (text);
         _text = name();
     }
 
-    void paint (lvtk::Graphics& g) override {
+    void paint (lui::Graphics& g) override {
         g.set_color (0xffffffff);
-        g.set_font (lvtk::Font (11.f));
+        g.set_font (lui::Font (11.f));
         g.draw_text (_text, bounds().at (0).as<float>(), _align);
     }
 
@@ -31,11 +31,11 @@ public:
     }
 
 private:
-    lvtk::Justify _align { lvtk::Justify::CENTERED };
+    lui::Justify _align { lui::Justify::CENTERED };
     std::string _text;
 };
 
-class Content : public lvtk::Widget {
+class Content : public lui::Widget {
 public:
     std::function<void (uint32_t, float)> on_control_changed;
 
@@ -43,7 +43,7 @@ public:
         set_opaque (true);
 
         for (int i = Ports::Wet; i <= Ports::Width; ++i) {
-            auto s = add (new lvtk::Dial());
+            auto s = add (new lui::Dial());
             s->set_range (0.0, 1.0);
 
             s->on_value_changed = [&, i, s]() {
@@ -95,7 +95,7 @@ public:
 
         auto index  = static_cast<int> (port - Ports::Wet);
         auto dvalue = static_cast<double> (value);
-        sliders[index]->set_value (dvalue, lvtk::Notify::NONE);
+        sliders[index]->set_value (dvalue, lui::Notify::NONE);
     }
 
 protected:
@@ -112,16 +112,16 @@ protected:
         }
     }
 
-    void paint (lvtk::Graphics& g) override {
+    void paint (lui::Graphics& g) override {
         g.set_color (0xff242222);
         g.fill_rect (bounds().at (0));
         g.set_color (0xccffffff);
         g.draw_text ("   eVerb",
                      bounds().at (0).slice_top(24).smaller (3, 4).as<float>(),
-                     lvtk::Justify::MID_LEFT);
+                     lui::Justify::MID_LEFT);
     }
 
 private:
-    std::vector<lvtk::Dial*> sliders;
+    std::vector<lui::Dial*> sliders;
     std::vector<ControlLabel*> labels;
 };

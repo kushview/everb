@@ -18,7 +18,7 @@ struct eVerb {
     std::vector<clap_audio_port_info_t> ins, outs;
     std::vector<clap_param_info_t> param_info;
 
-    std::unique_ptr<lvtk::Main> gui;
+    std::unique_ptr<lui::Main> gui;
     std::unique_ptr<Content> content;
 
     const clap_host_t* host { nullptr };
@@ -522,7 +522,7 @@ static bool everb_ui_create (const clap_plugin_t* plugin, const char* api, bool 
     auto& self = detail::from (plugin);
 
     if (self.content == nullptr) {
-        self.gui     = std::make_unique<lvtk::Main> (lvtk::Mode::MODULE, std::make_unique<lvtk::Cairo>());
+        self.gui     = std::make_unique<lui::Main> (lui::Mode::MODULE, std::make_unique<lui::Cairo>());
         self.content = std::make_unique<Content>();
         self.content->on_control_changed = [&](uint32_t port, float value ) {
             std::lock_guard<std::mutex> sl (self.params_mutex);

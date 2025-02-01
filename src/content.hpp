@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-#include <lvtk/ui/graphics.hpp>
-#include <lvtk/ui/slider.hpp>
-#include <lvtk/ui/widget.hpp>
+#include <lui/graphics.hpp>
+#include <lui/slider.hpp>
+#include <lui/widget.hpp>
 
 #include "ports.hpp"
 

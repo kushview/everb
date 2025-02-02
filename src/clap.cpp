@@ -23,7 +23,7 @@ struct eVerb {
 
     const clap_host_t* host { nullptr };
     const clap_host_timer_support_t* timer { nullptr };
-    clap_id idle_timer { CLAP_INVALID_ID };
+    clap_id idle_timer { 0 };
 
     double get_param (uint32_t param_id, const Reverb::Parameters& values)
     {
@@ -529,7 +529,7 @@ static bool everb_ui_create (const clap_plugin_t* plugin, const char* api, bool 
             self.update (port, value);
             self.apply_params();
         };
-        self.timer->register_timer (self.host, 20, &self.idle_timer);
+        // self.timer->register_timer (self.host, 20, &self.idle_timer);
     }
 
     return true;
@@ -540,7 +540,7 @@ static bool everb_ui_create (const clap_plugin_t* plugin, const char* api, bool 
 static void everb_ui_destroy (const clap_plugin_t* plugin) {
     auto& self = detail::from (plugin);
 
-    if (self.idle_timer != CLAP_INVALID_ID) {
+    if (self.idle_timer != CLAP_INVALID_ID && self.idle_timer != 0) {
         self.timer->unregister_timer (self.host, self.idle_timer);
         self.idle_timer = CLAP_INVALID_ID;
     }
@@ -673,12 +673,8 @@ static const clap_plugin_gui_t _gui = {
 
 //==============================================================================
 static void everb_on_timer (const clap_plugin_t* plugin, clap_id timer_id) {
-    juce::ignoreUnused (timer_id);
-    auto& self = detail::from (plugin);
-    if (self.gui == nullptr)
-        return;
-    
-    if (timer_id == self.idle_timer)
+    auto& self = detail::from (plugin);    
+    if (self.gui != nullptr && timer_id == self.idle_timer)
         self.gui->loop (0.0);
 }
 

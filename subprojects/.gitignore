@@ -1,5 +1,7 @@
 *
 !lvtk.wrap
 !juce.wrap
+!lui.wrap
+!clap.wrap
 !.gitignore
 !.ignore

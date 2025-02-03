@@ -25,8 +25,6 @@ endif
 lvtk_opts = [
     'doc=disabled',
     'test=disabled',
-    'demo=disabled',
-    'default_library=static'
 ]
 
 lvtk_dep = dependency ('lvtk-3', 
@@ -46,8 +44,9 @@ lui_cairo_dep = dependency ('lui-cairo-0',
 juce_proj = subproject ('juce')
 juce_dep = juce_proj.get_variable ('juce_dep')
 
-clap_dep = dependency('clap')
+clap_dep = dependency ('clap')
 
 subdir ('src')
 
+summary ('Install', clap_install_dir, section: 'CLAP')
 summary ('Install', lv2_install_dir, section : 'LV2')

@@ -4,4 +4,4 @@ push-url=git@github.com:lvtk/lvtk.git
 revision = main
 
 [provide]
-dependency_names = lvtk-3, lvtk-widgets-3, lvtk-cairo-3
+lvtk-3=lvtk_dep

@@ -23,7 +23,7 @@ struct eVerb {
 
     const clap_host_t* host { nullptr };
     const clap_host_timer_support_t* timer { nullptr };
-    clap_id idle_timer { 0 };
+    clap_id idle_timer { CLAP_INVALID_ID };
 
     double get_param (uint32_t param_id, const Reverb::Parameters& values)
     {
@@ -529,7 +529,7 @@ static bool everb_ui_create (const clap_plugin_t* plugin, const char* api, bool 
             self.update (port, value);
             self.apply_params();
         };
-        // self.timer->register_timer (self.host, 20, &self.idle_timer);
+        self.timer->register_timer (self.host, 20, &self.idle_timer);
     }
 
     return true;
@@ -540,7 +540,7 @@ static bool everb_ui_create (const clap_plugin_t* plugin, const char* api, bool 
 static void everb_ui_destroy (const clap_plugin_t* plugin) {
     auto& self = detail::from (plugin);
 
-    if (self.idle_timer != CLAP_INVALID_ID && self.idle_timer != 0) {
+    if (self.idle_timer != CLAP_INVALID_ID) {
         self.timer->unregister_timer (self.host, self.idle_timer);
         self.idle_timer = CLAP_INVALID_ID;
     }

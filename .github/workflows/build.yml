@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: deps
-    - run: apt-get update && apt-get install -y meson cmake
+      run: apt-get update && apt-get install -y meson cmake
     - name: configure
       run: meson setup build
     - name: compile

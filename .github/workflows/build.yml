@@ -1,0 +1,25 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: deps
+    - run: apt-get update && apt-get install -y meson cmake
+    - name: configure
+      run: meson setup build
+    - name: compile
+      run: meson compile -C build
+    # - name: make check
+    #   run: make check
+    # - name: make distcheck
+    #   run: make distcheck

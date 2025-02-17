@@ -2,7 +2,7 @@ name: C/C++ CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "*" ]
   pull_request:
     branches: [ "main" ]
 
@@ -14,12 +14,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: deps
-      run: sudo apt-get update && sudo apt-get install -y meson cmake libx11-dev
+      run: sudo apt-get update && sudo apt-get install -y meson cmake libboost-dev libx11-dev libxext-dev libxrender-dev
     - name: configure
-      run: meson setup build
+      run: meson setup -Dprefix=/ build
     - name: compile
-      run: meson compile -C build
-    # - name: make check
-    #   run: make check
-    # - name: make distcheck
-    #   run: make distcheck
+      run: meson compile -j4 -C build
+    - name: install
+      run: meson install -C build --destdir="stage"

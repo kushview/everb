@@ -1,4 +1,4 @@
-[Build](https://github.com/kushview/everb/actions/workflows/build.yml/badge.svg)
+![Build](https://github.com/kushview/everb/actions/workflows/build.yml/badge.svg)
 
 # eVerb
 A very simple reverb that uses `juce::Reverb` for the business end.

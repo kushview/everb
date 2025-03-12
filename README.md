@@ -12,3 +12,11 @@ A very simple reverb that uses `juce::Reverb` for the business end.
 - **Room size:** Affects the decay time of the reverb.
 - **Damping:** Damp reflections.
 - **Width:** Stereo spread... I guess.
+
+## Build
+
+```sh
+meson setup build
+meson compile -C build
+meson install -C build --skip-subprojects
+```

@@ -19,6 +19,8 @@
 
 #pragma once
 
+namespace everb{
+
 struct Ports {
     enum Index {
         AudioIn_1  = 0,
@@ -36,3 +38,4 @@ struct Ports {
    inline static constexpr uint32_t paramsBegin() noexcept { return Wet; }
    inline static constexpr uint32_t paramsEnd() noexcept { return Width + 1; }
 };
+} // namespace everb

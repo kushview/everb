@@ -39,6 +39,8 @@
 
 #define EVERB_UI_URI "https://kushview.net/plugins/everb/ui"
 
+namespace everb {
+
 
 struct ScopedFlag {
     ScopedFlag (bool& val, bool set) : original (val), value (val) {
@@ -104,6 +106,7 @@ private:
     lui::Main _main;
     std::unique_ptr<Content> content;
 };
+} //namespace everb
 
-static lvtk::UIDescriptor<eVerbUI> __eVerbUI (
+static lvtk::UIDescriptor<everb::eVerbUI> __eVerbUI (
     EVERB_UI_URI, { LV2_UI__parent });

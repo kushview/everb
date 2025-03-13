@@ -8,6 +8,8 @@
 #include "everb.hpp"
 #include "ports.hpp"
 
+namespace everb{
+
 struct eVerb {
     clap_plugin_t plugin;
     Reverb reverb;
@@ -577,7 +579,7 @@ static bool everb_ui_get_size (const clap_plugin_t* plugin, uint32_t* width, uin
     return true;
 }
 
-// Returns true if the window is resizeable (mouse drag).
+// Returns true if the window is resizable (mouse drag).
 // [main-thread & !floating]
 static bool everb_ui_can_resize (const clap_plugin_t*) {
     return false;
@@ -757,6 +759,7 @@ static const clap_plugin_factory_t _factory = {
         return plugin;
     }
 };
+} // namespace everb
 
 extern "C" CLAP_EXPORT const clap_plugin_entry_t clap_entry = {
     .clap_version = CLAP_VERSION,
@@ -769,7 +772,7 @@ extern "C" CLAP_EXPORT const clap_plugin_entry_t clap_entry = {
 
     .get_factory = [] (const char* factory_id) -> const void* {
         if (0 == std::strcmp (factory_id, CLAP_PLUGIN_FACTORY_ID))
-            return (const void*) &_factory;
+            return (const void*) &everb::_factory;
         return nullptr;
     }
 };

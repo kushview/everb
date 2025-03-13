@@ -25,6 +25,10 @@
 
 #define EVERB_URI "https://kushview.net/plugins/everb"
 
+namespace everb{
+
+
+
 class Module final : public lvtk::Plugin<Module> {
 public:
     Module (const lvtk::Args& args)
@@ -36,16 +40,16 @@ public:
 
     void connect_port (uint32_t port, void* data) {
         switch (port) {
-            case Ports::AudioIn_1:
+            case everb::Ports::AudioIn_1:
                 input[0] = (float*) data;
                 break;
-            case Ports::AudioIn_2:
+            case everb::Ports::AudioIn_2:
                 input[1] = (float*) data;
                 break;
-            case Ports::AudioOut_1:
+            case everb::Ports::AudioOut_1:
                 output[0] = (float*) data;
                 break;
-            case Ports::AudioOut_2:
+            case everb::Ports::AudioOut_2:
                 output[1] = (float*) data;
                 break;
         }
@@ -55,19 +59,19 @@ public:
             return;
 
         switch (port) {
-            case Ports::Wet:
+            case everb::Ports::Wet:
                 params.wetLevel = *((float*) data);
                 break;
-            case Ports::Dry:
+            case everb::Ports::Dry:
                 params.dryLevel = *((float*) data);
                 break;
-            case Ports::RoomSize:
+            case everb::Ports::RoomSize:
                 params.roomSize = *((float*) data);
                 break;
-            case Ports::Width:
+            case everb::Ports::Width:
                 params.width = *((float*) data);
                 break;
-            case Ports::Damping:
+            case everb::Ports::Damping:
                 params.damping = *((float*) data);
                 break;
         }
@@ -103,5 +107,6 @@ private:
     float* input[2];
     float* output[2];
 };
+} // namespace everb
 
-static const lvtk::Descriptor<Module> everb (EVERB_URI);
+static const lvtk::Descriptor<everb::Module> __everb (EVERB_URI);

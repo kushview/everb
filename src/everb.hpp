@@ -41,6 +41,9 @@
 
     @tags{Audio}
 */
+namespace everb{
+
+
 class Reverb {
 public:
     //==============================================================================
@@ -299,3 +302,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Reverb)
 };
+} // namespace everb

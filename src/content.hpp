@@ -12,6 +12,7 @@
 
 using Slider = lui::Slider;
 
+namespace everb {
 class ControlLabel : public lui::Widget {
 public:
     ControlLabel (const std::string& text) {
@@ -125,3 +126,4 @@ private:
     std::vector<lui::Dial*> sliders;
     std::vector<ControlLabel*> labels;
 };
+} // namespace everb

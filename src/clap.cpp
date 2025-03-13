@@ -139,7 +139,7 @@ static const clap_plugin_audio_ports_t _audio_ports = {
 // and host extensions, so clap related setup activities should be done here rather than in
 // create_plugin.
 // [main-thread]
-static bool everb_init (const clap_plugin_t* plugin) {
+static bool init (const clap_plugin_t* plugin) {
     auto& self = detail::from (plugin);
 
     /* audio ports */
@@ -205,7 +205,7 @@ static bool everb_init (const clap_plugin_t* plugin) {
 // Free the plugin and its resources.
 // It is required to deactivate the plugin prior to this call.
 // [main-thread & !active]
-static void everb_destroy (const clap_plugin_t* plugin) {
+static void destroy (const clap_plugin_t* plugin) {
     delete (eVerb*) plugin->plugin_data;
 }
 
@@ -217,7 +217,7 @@ static void everb_destroy (const clap_plugin_t* plugin) {
 // Once activated the latency and port configuration must remain constant, until deactivation.
 // Returns true on success.
 // [main-thread & !active]
-static bool everb_activate (const clap_plugin_t* plugin,
+static bool activate (const clap_plugin_t* plugin,
                             double sample_rate,
                             uint32_t min_frames_count,
                             uint32_t max_frames_count) {
@@ -226,21 +226,21 @@ static bool everb_activate (const clap_plugin_t* plugin,
     return true;
 }
 // [main-thread & active]
-static void everb_deactivate (const clap_plugin_t* plugin) {
+static void deactivate (const clap_plugin_t* plugin) {
     juce::ignoreUnused (plugin);
 }
 
 // Call start processing before processing.
 // Returns true on success.
 // [audio-thread & active & !processing]
-static bool everb_start_processing (const clap_plugin_t* plugin) {
+static bool start_processing (const clap_plugin_t* plugin) {
     juce::ignoreUnused (plugin);
     return true;
 }
 
 // Call stop processing before sending the plugin to sleep.
 // [audio-thread & active & processing]
-static void everb_stop_processing (const clap_plugin_t* plugin) {
+static void stop_processing (const clap_plugin_t* plugin) {
     juce::ignoreUnused (plugin);
 }
 
@@ -250,7 +250,7 @@ static void everb_stop_processing (const clap_plugin_t* plugin) {
 // - clap_process.steady_time may jump backward.
 //
 // [audio-thread & active]
-static void everb_reset (const clap_plugin_t* plugin) {
+static void reset (const clap_plugin_t* plugin) {
     detail::from (plugin).reverb.reset();
 }
 
@@ -258,7 +258,7 @@ static void everb_reset (const clap_plugin_t* plugin) {
 // All the pointers coming from clap_process_t and its nested attributes,
 // are valid until process() returns.
 // [audio-thread & active & processing]
-static clap_process_status everb_process (const clap_plugin_t* plugin,
+static clap_process_status process (const clap_plugin_t* plugin,
                                           const clap_process_t* process) {
     auto& self  = detail::from (plugin);
     auto num_in = process->in_events->size (process->in_events);
@@ -296,7 +296,7 @@ static clap_process_status everb_process (const clap_plugin_t* plugin,
 // Called by the host on the main thread in response to a previous call to:
 //   host->request_callback(host);
 // [main-thread]
-static void everb_on_main_thread (const clap_plugin_t* plugin) {
+static void on_main_thread (const clap_plugin_t* plugin) {
     juce::ignoreUnused (plugin);
 }
 
@@ -333,7 +333,7 @@ private:
 
 // Returns the number of parameters.
 // [main-thread]
-static uint32_t everb_params_count (const clap_plugin_t* plugin) {
+static uint32_t params_count (const clap_plugin_t* plugin) {
     auto& self = detail::from (plugin);
     return self.param_info.size();
 }
@@ -341,11 +341,11 @@ static uint32_t everb_params_count (const clap_plugin_t* plugin) {
 // Copies the parameter's info to param_info.
 // Returns true on success.
 // [main-thread]
-static bool everb_params_get_info (const clap_plugin_t* plugin,
+static bool params_get_info (const clap_plugin_t* plugin,
                                    uint32_t param_index,
                                    clap_param_info_t* param_info) {
     auto& self = detail::from (plugin);
-    if (param_index < everb_params_count (plugin)) {
+    if (param_index < params_count (plugin)) {
         *param_info = self.param_info[param_index];
         return true;
     }
@@ -356,7 +356,7 @@ static bool everb_params_get_info (const clap_plugin_t* plugin,
 // Writes the parameter's current value to out_value.
 // Returns true on success.
 // [main-thread]
-static bool everb_params_get_value (const clap_plugin_t* plugin, clap_id param_id, double* out_value) {
+static bool params_get_value (const clap_plugin_t* plugin, clap_id param_id, double* out_value) {
     auto& self = detail::from (plugin);
     for (const auto& param : self.param_info) {
         if (param.id == param_id) {
@@ -389,7 +389,7 @@ static bool everb_params_get_value (const clap_plugin_t* plugin, clap_id param_i
 // values before displaying it to the user.
 // Returns true on success.
 // [main-thread]
-static bool everb_params_value_to_text (const clap_plugin_t* plugin,
+static bool params_value_to_text (const clap_plugin_t* plugin,
                                         clap_id param_id,
                                         double value,
                                         char* out_buffer,
@@ -406,7 +406,7 @@ static bool everb_params_value_to_text (const clap_plugin_t* plugin,
 // The host can use this to convert user input into a parameter value.
 // Returns true on success.
 // [main-thread]
-static bool everb_params_text_to_value (const clap_plugin_t* plugin,
+static bool params_text_to_value (const clap_plugin_t* plugin,
                                         clap_id param_id,
                                         const char* param_value_text,
                                         double* out_value) {
@@ -425,19 +425,19 @@ static bool everb_params_text_to_value (const clap_plugin_t* plugin,
 // lost within flush().
 //
 // [active ? audio-thread : main-thread]
-static void everb_params_flush (const clap_plugin_t* plugin,
+static void params_flush (const clap_plugin_t* plugin,
                                 const clap_input_events_t* in,
                                 const clap_output_events_t* out) {
     juce::ignoreUnused (plugin, in, out);
 }
 
 static const clap_plugin_params_t _params = {
-    .count         = &everb_params_count,
-    .get_info      = &everb_params_get_info,
-    .get_value     = &everb_params_get_value,
-    .value_to_text = &everb_params_value_to_text,
-    .text_to_value = &everb_params_text_to_value,
-    .flush         = &everb_params_flush
+    .count         = &params_count,
+    .get_info      = &params_get_info,
+    .get_value     = &params_get_value,
+    .value_to_text = &params_value_to_text,
+    .text_to_value = &params_text_to_value,
+    .flush         = &params_flush
 };
 
 //==============================================================================
@@ -445,7 +445,7 @@ static const clap_plugin_params_t _params = {
 // Saves the plugin state into stream.
 // Returns true if the state was correctly saved.
 // [main-thread]
-static bool everb_load (const clap_plugin_t* plugin, const clap_istream_t* stream) {
+static bool load (const clap_plugin_t* plugin, const clap_istream_t* stream) {
     auto& self = detail::from (plugin);
     Reverb::Parameters params;
     if (sizeof (params) != stream->read (stream, &params, sizeof (params)))
@@ -463,7 +463,7 @@ static bool everb_load (const clap_plugin_t* plugin, const clap_istream_t* strea
 // Loads the plugin state from stream.
 // Returns true if the state was correctly restored.
 // [main-thread]
-static bool everb_save (const clap_plugin_t* plugin, const clap_ostream_t* stream) {
+static bool save (const clap_plugin_t* plugin, const clap_ostream_t* stream) {
     auto& self      = detail::from (plugin);
     auto params     = self.safe_params();
     auto total_size = (int64_t) sizeof (params);
@@ -471,8 +471,8 @@ static bool everb_save (const clap_plugin_t* plugin, const clap_ostream_t* strea
 }
 
 static const clap_plugin_state_t _state = {
-    .save = &everb_save,
-    .load = &everb_load
+    .save = &save,
+    .load = &load
 };
 
 //==============================================================================
@@ -488,7 +488,7 @@ static const clap_plugin_state_t _state = {
 // Returns true if the requested gui api is supported, either in floating (plugin-created)
 // or non-floating (embedded) mode.
 // [main-thread]
-static bool everb_ui_is_api_supported (const clap_plugin_t* plugin,
+static bool ui_is_api_supported (const clap_plugin_t* plugin,
                                        const char* api,
                                        bool is_floating) {
     auto& self = detail::from (plugin);
@@ -500,7 +500,7 @@ static bool everb_ui_is_api_supported (const clap_plugin_t* plugin,
 // The const char **api variable should be explicitly assigned as a pointer to
 // one of the CLAP_WINDOW_API_ constants defined above, not strcopied.
 // [main-thread]
-static bool everb_ui_get_preferred_api (const clap_plugin_t*,
+static bool ui_get_preferred_api (const clap_plugin_t*,
                                         const char** api,
                                         bool* is_floating) {
     *is_floating = false;
@@ -521,7 +521,7 @@ static bool everb_ui_get_preferred_api (const clap_plugin_t*,
 //
 // Returns true if the GUI is successfully created.
 // [main-thread]
-static bool everb_ui_create (const clap_plugin_t* plugin, const char* api, bool is_floating) {
+static bool ui_create (const clap_plugin_t* plugin, const char* api, bool is_floating) {
     auto& self = detail::from (plugin);
 
     if (self.content == nullptr) {
@@ -540,7 +540,7 @@ static bool everb_ui_create (const clap_plugin_t* plugin, const char* api, bool 
 
 // Free all resources associated with the gui.
 // [main-thread]
-static void everb_ui_destroy (const clap_plugin_t* plugin) {
+static void ui_destroy (const clap_plugin_t* plugin) {
     auto& self = detail::from (plugin);
 
     if (self.idle_timer != CLAP_INVALID_ID) {
@@ -563,7 +563,7 @@ static void everb_ui_destroy (const clap_plugin_t* plugin) {
 // Returns true if the scaling could be applied
 // Returns false if the call was ignored, or the scaling could not be applied.
 // [main-thread]
-static bool everb_ui_set_scale (const clap_plugin_t* plugin, double scale) {
+static bool ui_set_scale (const clap_plugin_t* plugin, double scale) {
     juce::ignoreUnused (plugin, scale);
     return false;
 }
@@ -573,7 +573,7 @@ static bool everb_ui_set_scale (const clap_plugin_t* plugin, double scale) {
 //
 // Returns true if the plugin could get the size.
 // [main-thread]
-static bool everb_ui_get_size (const clap_plugin_t* plugin, uint32_t* width, uint32_t* height) {
+static bool ui_get_size (const clap_plugin_t* plugin, uint32_t* width, uint32_t* height) {
     auto& self = detail::from (plugin);
     *width     = (uint32_t) self.content->width();
     *height    = (uint32_t) self.content->height();
@@ -582,13 +582,13 @@ static bool everb_ui_get_size (const clap_plugin_t* plugin, uint32_t* width, uin
 
 // Returns true if the window is resizable (mouse drag).
 // [main-thread & !floating]
-static bool everb_ui_can_resize (const clap_plugin_t*) {
+static bool ui_can_resize (const clap_plugin_t*) {
     return false;
 }
 
 // Returns true if the plugin can provide hints on how to resize the window.
 // [main-thread & !floating]
-static bool everb_ui_get_resize_hints (const clap_plugin_t* plugin, clap_gui_resize_hints_t* hints) {
+static bool ui_get_resize_hints (const clap_plugin_t* plugin, clap_gui_resize_hints_t* hints) {
     return false;
 }
 
@@ -598,7 +598,7 @@ static bool everb_ui_get_resize_hints (const clap_plugin_t* plugin, clap_gui_res
 //
 // Returns true if the plugin could adjust the given size.
 // [main-thread & !floating]
-static bool everb_ui_adjust_size (const clap_plugin_t* plugin, uint32_t* width, uint32_t* height) {
+static bool ui_adjust_size (const clap_plugin_t* plugin, uint32_t* width, uint32_t* height) {
     return false;
 }
 
@@ -606,7 +606,7 @@ static bool everb_ui_adjust_size (const clap_plugin_t* plugin, uint32_t* width, 
 //
 // Returns true if the plugin could resize its window to the given size.
 // [main-thread & !floating]
-static bool everb_set_size (const clap_plugin_t* plugin, uint32_t width, uint32_t height) {
+static bool set_size (const clap_plugin_t* plugin, uint32_t width, uint32_t height) {
     return false;
 }
 
@@ -614,7 +614,7 @@ static bool everb_set_size (const clap_plugin_t* plugin, uint32_t width, uint32_
 //
 // Returns true on success.
 // [main-thread & !floating]
-static bool everb_set_parent (const clap_plugin_t* plugin, const clap_window_t* window) {
+static bool set_parent (const clap_plugin_t* plugin, const clap_window_t* window) {
     auto& self = detail::from (plugin);
     return nullptr != self.gui->elevate (*self.content, 0, window->x11);
 }
@@ -623,20 +623,20 @@ static bool everb_set_parent (const clap_plugin_t* plugin, const clap_window_t* 
 //
 // Returns true on success.
 // [main-thread & floating]
-static bool everb_set_transient (const clap_plugin_t* plugin, const clap_window_t* window) {
+static bool set_transient (const clap_plugin_t* plugin, const clap_window_t* window) {
     return false;
 }
 
 // Suggests a window title. Only for floating windows.
 //
 // [main-thread & floating]
-static void everb_suggest_title (const clap_plugin_t* plugin, const char* title) {}
+static void suggest_title (const clap_plugin_t* plugin, const char* title) {}
 
 // Show the window.
 //
 // Returns true on success.
 // [main-thread]
-static bool everb_show (const clap_plugin_t* plugin) {
+static bool show (const clap_plugin_t* plugin) {
     auto& self    = detail::from (plugin);
     auto& content = *self.content;
     self.sync_params();
@@ -649,7 +649,7 @@ static bool everb_show (const clap_plugin_t* plugin) {
 //
 // Returns true on success.
 // [main-thread]
-static bool everb_hide (const clap_plugin_t* plugin) {
+static bool hide (const clap_plugin_t* plugin) {
     auto& self    = detail::from (plugin);
     auto& content = *self.content;
     content.set_visible (false);
@@ -657,32 +657,32 @@ static bool everb_hide (const clap_plugin_t* plugin) {
 }
 
 static const clap_plugin_gui_t _gui = {
-    .is_api_supported  = &everb_ui_is_api_supported,
-    .get_preferred_api = &everb_ui_get_preferred_api,
-    .create            = &everb_ui_create,
-    .destroy           = &everb_ui_destroy,
-    .set_scale         = &everb_ui_set_scale,
-    .get_size          = &everb_ui_get_size,
-    .can_resize        = &everb_ui_can_resize,
-    .get_resize_hints  = &everb_ui_get_resize_hints,
-    .adjust_size       = &everb_ui_adjust_size,
-    .set_size          = &everb_set_size,
-    .set_parent        = &everb_set_parent,
-    .set_transient     = &everb_set_transient,
-    .suggest_title     = &everb_suggest_title,
-    .show              = &everb_show,
-    .hide              = &everb_hide
+    .is_api_supported  = &ui_is_api_supported,
+    .get_preferred_api = &ui_get_preferred_api,
+    .create            = &ui_create,
+    .destroy           = &ui_destroy,
+    .set_scale         = &ui_set_scale,
+    .get_size          = &ui_get_size,
+    .can_resize        = &ui_can_resize,
+    .get_resize_hints  = &ui_get_resize_hints,
+    .adjust_size       = &ui_adjust_size,
+    .set_size          = &set_size,
+    .set_parent        = &set_parent,
+    .set_transient     = &set_transient,
+    .suggest_title     = &suggest_title,
+    .show              = &show,
+    .hide              = &hide
 };
 
 //==============================================================================
-static void everb_on_timer (const clap_plugin_t* plugin, clap_id timer_id) {
+static void on_timer (const clap_plugin_t* plugin, clap_id timer_id) {
     auto& self = detail::from (plugin);
     if (self.gui != nullptr && timer_id == self.idle_timer)
         self.gui->loop (0.0);
 }
 
 static const clap_plugin_timer_support_t _timer {
-    .on_timer = &everb_on_timer
+    .on_timer = &on_timer
 };
 
 //==============================================================================
@@ -704,7 +704,7 @@ static const clap_plugin_descriptor_t _everb = {
 // It is forbidden to call it before plugin->init().
 // You can call it within plugin->init() call, and after.
 // [thread-safe]
-static const void* everb_get_extension (const clap_plugin_t*, const char* id) {
+static const void* get_extension (const clap_plugin_t*, const char* id) {
     if (0 == std::strcmp (id, CLAP_EXT_AUDIO_PORTS)) {
         return &_audio_ports;
     } else if (0 == std::strcmp (id, CLAP_EXT_PARAMS)) {
@@ -746,16 +746,16 @@ static const clap_plugin_factory_t _factory = {
         auto plugin              = &verb->plugin;
         plugin->desc             = &_everb;
         plugin->plugin_data      = (void*) verb;
-        plugin->activate         = &everb_activate;
-        plugin->deactivate       = &everb_deactivate;
-        plugin->destroy          = &everb_destroy;
-        plugin->get_extension    = &everb_get_extension;
-        plugin->init             = &everb_init;
-        plugin->on_main_thread   = &everb_on_main_thread;
-        plugin->process          = &everb_process;
-        plugin->reset            = &everb_reset;
-        plugin->start_processing = &everb_start_processing;
-        plugin->stop_processing  = &everb_stop_processing;
+        plugin->activate         = &activate;
+        plugin->deactivate       = &deactivate;
+        plugin->destroy          = &destroy;
+        plugin->get_extension    = &get_extension;
+        plugin->init             = &init;
+        plugin->on_main_thread   = &on_main_thread;
+        plugin->process          = &process;
+        plugin->reset            = &reset;
+        plugin->start_processing = &start_processing;
+        plugin->stop_processing  = &stop_processing;
 
         return plugin;
     }

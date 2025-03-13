@@ -40,16 +40,16 @@ public:
 
     void connect_port (uint32_t port, void* data) {
         switch (port) {
-            case everb::Ports::AudioIn_1:
+            case Ports::AudioIn_1:
                 input[0] = (float*) data;
                 break;
-            case everb::Ports::AudioIn_2:
+            case Ports::AudioIn_2:
                 input[1] = (float*) data;
                 break;
-            case everb::Ports::AudioOut_1:
+            case Ports::AudioOut_1:
                 output[0] = (float*) data;
                 break;
-            case everb::Ports::AudioOut_2:
+            case Ports::AudioOut_2:
                 output[1] = (float*) data;
                 break;
         }
@@ -59,19 +59,19 @@ public:
             return;
 
         switch (port) {
-            case everb::Ports::Wet:
+            case Ports::Wet:
                 params.wetLevel = *((float*) data);
                 break;
-            case everb::Ports::Dry:
+            case Ports::Dry:
                 params.dryLevel = *((float*) data);
                 break;
-            case everb::Ports::RoomSize:
+            case Ports::RoomSize:
                 params.roomSize = *((float*) data);
                 break;
-            case everb::Ports::Width:
+            case Ports::Width:
                 params.width = *((float*) data);
                 break;
-            case everb::Ports::Damping:
+            case Ports::Damping:
                 params.damping = *((float*) data);
                 break;
         }

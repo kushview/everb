@@ -15,8 +15,8 @@ A very simple reverb that uses `juce::Reverb` for the business end.
 
 ## Build
 
-```bash
+```sh
+meson setup build
 meson compile -C build
-meosn install -C build #if you want to install the project
-
+meson install -C build --skip-subprojects
 ```

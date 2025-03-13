@@ -41,8 +41,7 @@
 
     @tags{Audio}
 */
-namespace everb{
-
+namespace everb {
 
 class Reverb {
 public:

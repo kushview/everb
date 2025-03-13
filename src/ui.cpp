@@ -25,12 +25,12 @@
 #include <lui/slider.hpp>
 #include <lui/widget.hpp>
 
-#include <lvtk/memory.hpp>
-#include <lvtk/ui.hpp>
 #include <lvtk/ext/idle.hpp>
 #include <lvtk/ext/parent.hpp>
 #include <lvtk/ext/resize.hpp>
 #include <lvtk/ext/urid.hpp>
+#include <lvtk/memory.hpp>
+#include <lvtk/ui.hpp>
 
 #include <lvtk/options.hpp>
 
@@ -40,7 +40,6 @@
 #define EVERB_UI_URI "https://kushview.net/plugins/everb/ui"
 
 namespace everb {
-
 
 struct ScopedFlag {
     ScopedFlag (bool& val, bool set) : original (val), value (val) {

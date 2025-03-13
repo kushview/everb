@@ -8,7 +8,7 @@
 #include "everb.hpp"
 #include "ports.hpp"
 
-namespace everb{
+namespace everb {
 
 struct eVerb {
     clap_plugin_t plugin;
@@ -27,8 +27,7 @@ struct eVerb {
     const clap_host_timer_support_t* timer { nullptr };
     clap_id idle_timer { CLAP_INVALID_ID };
 
-    double get_param (uint32_t param_id, const Reverb::Parameters& values)
-    {
+    double get_param (uint32_t param_id, const Reverb::Parameters& values) {
         switch (param_id) {
             case Ports::Damping:
                 return values.damping;
@@ -53,13 +52,13 @@ struct eVerb {
     void sync_params() {
         if (content == nullptr)
             return;
-        
+
         const auto sp = safe_params();
         for (uint32_t port = Ports::paramsBegin(); port < Ports::paramsEnd(); ++port) {
             content->update_slider (port, get_param (port, sp));
         }
     }
-    
+
     Reverb::Parameters safe_params() const noexcept {
         Reverb::Parameters out_params;
         {
@@ -452,9 +451,11 @@ static bool everb_load (const clap_plugin_t* plugin, const clap_istream_t* strea
     if (sizeof (params) != stream->read (stream, &params, sizeof (params)))
         return false;
 
-    {std::lock_guard<std::mutex> sl (self.params_mutex);
-    self.params = params;
-    self.apply_params();}
+    {
+        std::lock_guard<std::mutex> sl (self.params_mutex);
+        self.params = params;
+        self.apply_params();
+    }
     self.sync_params();
     return true;
 }
@@ -524,9 +525,9 @@ static bool everb_ui_create (const clap_plugin_t* plugin, const char* api, bool 
     auto& self = detail::from (plugin);
 
     if (self.content == nullptr) {
-        self.gui     = std::make_unique<lui::Main> (lui::Mode::MODULE, std::make_unique<lui::Cairo>());
-        self.content = std::make_unique<Content>();
-        self.content->on_control_changed = [&](uint32_t port, float value ) {
+        self.gui                         = std::make_unique<lui::Main> (lui::Mode::MODULE, std::make_unique<lui::Cairo>());
+        self.content                     = std::make_unique<Content>();
+        self.content->on_control_changed = [&] (uint32_t port, float value) {
             std::lock_guard<std::mutex> sl (self.params_mutex);
             self.update (port, value);
             self.apply_params();
@@ -675,7 +676,7 @@ static const clap_plugin_gui_t _gui = {
 
 //==============================================================================
 static void everb_on_timer (const clap_plugin_t* plugin, clap_id timer_id) {
-    auto& self = detail::from (plugin);    
+    auto& self = detail::from (plugin);
     if (self.gui != nullptr && timer_id == self.idle_timer)
         self.gui->loop (0.0);
 }

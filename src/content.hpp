@@ -102,11 +102,11 @@ public:
 protected:
     void resized() override {
         auto sb = bounds().at (0);
-        sb.slice_top(10);
+        sb.slice_top (10);
         int h = sb.width / 5;
         for (int i = 0; i < 5; ++i) {
-            auto cr = sb.slice_left (h);
-            auto dial = sliders[i];
+            auto cr    = sb.slice_left (h);
+            auto dial  = sliders[i];
             auto label = labels[i];
             dial->set_bounds (cr.slice_top (h));
             label->set_bounds (cr.slice_top (24));
@@ -118,7 +118,7 @@ protected:
         g.fill_rect (bounds().at (0));
         g.set_color (0xccffffff);
         g.draw_text ("   eVerb",
-                     bounds().at (0).slice_top(24).smaller (3, 4).as<float>(),
+                     bounds().at (0).slice_top (24).smaller (3, 4).as<float>(),
                      lui::Justify::MID_LEFT);
     }
 

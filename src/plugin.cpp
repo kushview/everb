@@ -25,9 +25,7 @@
 
 #define EVERB_URI "https://kushview.net/plugins/everb"
 
-namespace everb{
-
-
+namespace everb {
 
 class Module final : public lvtk::Plugin<Module> {
 public:

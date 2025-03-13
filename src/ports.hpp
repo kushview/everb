@@ -19,7 +19,7 @@
 
 #pragma once
 
-namespace everb{
+namespace everb {
 
 struct Ports {
     enum Index {
@@ -35,7 +35,7 @@ struct Ports {
         Width    = 8,
     };
 
-   inline static constexpr uint32_t paramsBegin() noexcept { return Wet; }
-   inline static constexpr uint32_t paramsEnd() noexcept { return Width + 1; }
+    inline static constexpr uint32_t paramsBegin() noexcept { return Wet; }
+    inline static constexpr uint32_t paramsEnd() noexcept { return Width + 1; }
 };
 } // namespace everb
